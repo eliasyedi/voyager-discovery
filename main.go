@@ -44,6 +44,11 @@ func main(){
 //maybe its not required yet
 func HandlerNotFound(w http.ResponseWriter, r *http.Request){
     log.Println("handler not found");
+    /*
     w.WriteHeader(http.StatusMethodNotAllowed);
+    */
+    //prefer this over the top one
+    //todo -> should make a Global error handler
+    http.Error(w,http.StatusText(http.StatusMethodNotAllowed),http.StatusMethodNotAllowed )
 }
 
