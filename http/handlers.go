@@ -1,14 +1,17 @@
 package handlers
 
 import (
-	"github.com/gorilla/mux"
 	"io"
 	"log"
 	"net/http"
+	"voyager-discovery/http/services"
+
+	"github.com/gorilla/mux"
 )
 
 type handler struct {
 	//for inyection of services, etc
+    discoveryService services.DiscoveryService
 }
 
 const (
@@ -16,8 +19,10 @@ const (
 )
 
 // pass things for inyection
-func NewDiscoveryHandler() *handler {
-	return &handler{}
+func NewDiscoveryHandler(discoveryService services.DiscoveryService) *handler {
+	return &handler{
+        discoveryService: discoveryService,
+    }
 }
 
 func (h *handler) RegisterHandlers(router *mux.Router) {

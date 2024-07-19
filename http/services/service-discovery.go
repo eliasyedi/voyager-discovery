@@ -1,7 +1,6 @@
 package services
 
-
-
+import "voyager-discovery/http/store"
 
 //interface for implementing diferent types of storing data
 type DiscoveryService interface{
@@ -17,15 +16,15 @@ type DiscoveryService interface{
 type DiscoveryServiceInMemmory struct{
     //this should hold whatever it needs to use
 
-    
+    Store store.Store 
 }
 
 
 
 //inyect whats needed for 
-func NewDiscoveryService() *DiscoveryServiceInMemmory {
+func NewDiscoveryService(store store.Store) *DiscoveryServiceInMemmory {
     return &DiscoveryServiceInMemmory{
-
+        Store: store,
     }
 }
 

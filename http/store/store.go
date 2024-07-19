@@ -3,6 +3,7 @@ package store
 //theres two roads to take sync.Map o use a sync.RWMutex
 
 import (
+	"errors"
 	"log"
 	"sync"
 )
@@ -10,20 +11,21 @@ import (
 //interface for storing implementation
 type Store interface{
     //store registerEntry
-    Store(key, value any)
+    Store(key any , value RegisterEntry)
     //gets registerEntry
-    Get(key any) any
+    Get(key any) (RegisterEntry, error)
 }
 
 
 type RegisterEntry struct{
+    //maybe theres more data to be put here 
     ServiceCode     string
     Url             string
     ServiceName     string
 }
 
 //holds register map 
-type RegisterStore map[any]any
+type RegisterStore map[any]RegisterEntry
 
 //struct for storage synchronization
 type MapStore struct{
@@ -32,17 +34,15 @@ type MapStore struct{
 }
 
 
-
-
 func NewInMemmoryStore()*MapStore{
     return &MapStore{
-        store: make(map[any]any),
+        store: make(map[any]RegisterEntry),
     }
 }
 
 
 
-func (s *MapStore) Store(key , value any){
+func (s *MapStore) Store(key any , value RegisterEntry){
     s.l.Lock()
     defer s.l.Unlock()
     s.store[key]= value
@@ -50,13 +50,12 @@ func (s *MapStore) Store(key , value any){
 }
 
 
-
-func (s *MapStore) Get(key any) any{
+func (s *MapStore) Get(key any) (RegisterEntry, error){
     s.l.RLock()
     defer s.l.RUnlock()
     if v, has := s.store[key]; has{
        log.Printf("got key value pair [%s], [%s]", key, v)
-        return v
+        return v, nil
     }
-    return ""
+    return RegisterEntry{}, errors.New("no data entry found");
 }
