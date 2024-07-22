@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"voyager-discovery/http/services"
+	"voyager-discovery/http/store"
 
 	"github.com/gorilla/mux"
 )
@@ -28,9 +31,10 @@ func NewDiscoveryHandler(discoveryService services.DiscoveryService) *handler {
 func (h *handler) RegisterHandlers(router *mux.Router) {
 
 	subRouter := router.PathPrefix(DISCOVERYPREFIX).Subrouter()
-	subRouter.HandleFunc("/register", h.dummy).Methods("POST")
-	subRouter.HandleFunc("/unregister", h.dummy).Methods("POST")
-	subRouter.HandleFunc("/registered", h.dummy).Methods("GET")
+	subRouter.HandleFunc("/register", h.HandlePostRegister).Methods("POST")
+	subRouter.HandleFunc("/unregister", h.dummy).Methods("DELETE")
+	subRouter.HandleFunc("/registered/{id}", h.HandleGetRegisteredById).Methods("GET")
+	subRouter.HandleFunc("/all-registered", h.HandleGetAllRegistered).Methods("GET")
 }
 
 func (h *handler) dummy(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +47,7 @@ func (h *handler) HanldlePostUnregister(w http.ResponseWriter, r *http.Request) 
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
+        //todo logic for errror handling 
 		log.Fatalf("could not deserialize request body")
 	}
 	log.Println(body)
@@ -53,10 +58,45 @@ func (h *handler) HandlePostRegister(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Fatalf("could not deserialize request body")
+        //todo logic for errror handling 
+	}
+    bodyStr := &store.RegisterEntry{}
+    err = json.Unmarshal(body, &bodyStr)
+	if err != nil {
+		log.Fatalf("could not deserialize request body")
+        //todo logic for errror handling 
 	}
 	log.Println(body)
+    h.discoveryService.Create(*bodyStr)
 }
 
-func (h *handler) HandleGetRegistered(w http.ResponseWriter, r *http.Request) {
+func (h *handler) HandleGetRegisteredById(w http.ResponseWriter, r *http.Request) {
 	log.Println("handle get registered services")
+    //
+    id := r.PathValue("id")
+    id,err := url.PathUnescape(id)
+    if err !=nil {
+        log.Println("bad request" )
+        //todo logic for errror handling 
+    }
+
+    if id == "" {
+        log.Println("bad request" )
+        //todo logic for errror handling 
+    }
+    
+}
+
+func (h *handler) HandleGetAllRegistered(w http.ResponseWriter, r *http.Request) {
+	log.Println("handle get registered services")
+    entry := h.discoveryService.GetAllRegistered();
+    
+    jsonRes, err := json.Marshal(entry);
+    if err != nil {
+        //todo logic for errror handling 
+        log.Println("theres been an error")
+        log.Println(err.Error())
+    }
+    w.Write(jsonRes);
+    return; 
 }

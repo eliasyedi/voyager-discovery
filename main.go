@@ -1,8 +1,13 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
 	common "voyager-discovery/commons"
 	handlers "voyager-discovery/http"
 	"voyager-discovery/http/services"
@@ -15,15 +20,20 @@ import (
 
 
 func main(){
+    var wait time.Duration
+    flag.DurationVar(&wait, "graceful-timeout", time.Second * 15, "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m")
+    flag.Parse()
+
     
     mux:= mux.NewRouter()
     //middlewares are going to be execute in the order that they were set
    
+    mux.Use(contentTypeForResponse)
     err := env.Load()
     if err!= nil{
         log.Fatal("could not load env file");
     }
-    url:= common.EnvStringOrDef("URL", ":3000");
+    url:= common.EnvStringOrDef("URL", "0.0.0.0:3000");
 
     //store
     store := store.NewInMemmoryStore()
@@ -36,20 +46,52 @@ func main(){
     
     discoveryHandler.RegisterHandlers(mux);
 
+    mux.HandleFunc("/", handlerNotFound)
 
-    mux.HandleFunc("/", HandlerNotFound)
-    err = http.ListenAndServe(url, mux);
-    if err!=nil{
-        log.Fatal("no pudo arrancar ", err); 
+
+
+    //server 
+    srv := &http.Server{
+        Addr:         url,
+        // Good practice to set timeouts to avoid Slowloris attacks.
+        WriteTimeout: time.Second * 15,
+        ReadTimeout:  time.Second * 15,
+        IdleTimeout:  time.Second * 60,
+        Handler: mux, // Pass our instance of gorilla/mux in.
     }
-    log.Printf("aqui estoy \n");
+
+    go func() {
+        if err := srv.ListenAndServe(); err!=nil{
+            log.Fatal("no pudo arrancar ", err); 
+        }
+    }()
+
+    c := make(chan os.Signal, 1)
+    // We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
+    // SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
+    signal.Notify(c, os.Interrupt)
+
+    // Block until we receive our signal.
+    <-c
+
+    // Create a deadline to wait for.
+    ctx, cancel := context.WithTimeout(context.Background(), wait)
+    defer cancel()
+    // Doesn't block if no connections, but will otherwise wait
+    // until the timeout deadline.
+    srv.Shutdown(ctx)
+    // Optionally, you could run srv.Shutdown in a goroutine and block on
+    // <-ctx.Done() if your application should wait for other services
+    // to finalize based on context cancellation.
+    log.Println("shutting down")
+    os.Exit(0)
 
 
 }
 
 
 //maybe its not required yet
-func HandlerNotFound(w http.ResponseWriter, r *http.Request){
+func handlerNotFound(w http.ResponseWriter, r *http.Request){
     log.Println("discoveryHandler not found");
     /*
     w.WriteHeader(http.StatusMethodNotAllowed);
@@ -58,4 +100,13 @@ func HandlerNotFound(w http.ResponseWriter, r *http.Request){
     //todo -> should make a Global error discoveryHandler
     http.Error(w,http.StatusText(http.StatusMethodNotAllowed),http.StatusMethodNotAllowed )
 }
+
+
+func contentTypeForResponse(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
+        w.Header().Set("content-type", "application/json")
+        next.ServeHTTP(w, r)
+    })
+}
+
 

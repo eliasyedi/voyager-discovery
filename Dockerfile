@@ -10,7 +10,7 @@ RUN	goarch=amd64 goos=linux go build -o api .
 
 
 #release stage
-FROM go:1.22.3-alpine AS run-release-stage
+FROM golang:1.22.3-alpine AS run-release-stage
 WORKDIR /app
 RUN apk add libc6-compat
 EXPOSE 8080

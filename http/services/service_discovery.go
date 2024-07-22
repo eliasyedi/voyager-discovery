@@ -12,9 +12,10 @@ import (
 type DiscoveryService interface{
     //creates a register for a service
     Create(registry store.RegisterEntry)
-    //returns a all register services
-    GetRegistered() store.RegisterEntry
-
+    //returns registered service with id
+    GetRegisteredById(id uuid.UUID) store.RegisterEntry
+    //return all registered services
+    GetAllRegistered() []store.RegisterEntry
 }
 
 
@@ -36,16 +37,14 @@ func NewDiscoveryService(store store.Store) *DiscoveryServiceInMemmory {
 
 
 
-//temp
-var i int = 1;
 
 func (d *DiscoveryServiceInMemmory) Create(registry store.RegisterEntry){
-    log.Println("storing value with id"+ fmt.Sprint(i));
+    log.Println("storing value {%v} "+ fmt.Sprint(registry));
     d.store.Store(registry)
 }
 
 
-func (d *DiscoveryServiceInMemmory) GetRegistered(id uuid.UUID) store.RegisterEntry{
+func (d *DiscoveryServiceInMemmory) GetRegisteredById(id uuid.UUID) store.RegisterEntry{
     data, err := d.store.Get(id)
 
     if err != nil {
@@ -55,7 +54,9 @@ func (d *DiscoveryServiceInMemmory) GetRegistered(id uuid.UUID) store.RegisterEn
     return data
 
      
-//todo 
 }
 
 
+func (d *DiscoveryServiceInMemmory) GetAllRegistered() []store.RegisterEntry{
+    return d.store.GetAll() 
+}
