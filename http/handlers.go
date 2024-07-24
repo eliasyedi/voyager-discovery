@@ -9,6 +9,7 @@ import (
 	"voyager-discovery/http/services"
 	"voyager-discovery/http/store"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -73,18 +74,25 @@ func (h *handler) HandlePostRegister(w http.ResponseWriter, r *http.Request) {
 func (h *handler) HandleGetRegisteredById(w http.ResponseWriter, r *http.Request) {
 	log.Println("handle get registered services")
     //
-    id := r.PathValue("id")
-    id,err := url.PathUnescape(id)
-    if err !=nil {
-        log.Println("bad request" )
+    params := mux.Vars(r)
+    id :=  params["id"]
+    log.Println(id)
+    //no need for pathUnescape, its allready unescaped
+    //id,err := url.PathUnescape(id)
+    log.Println("after")
+    log.Println(id)
+//    if err !=nil {
+ //       log.Println("bad request" )
         //todo logic for errror handling 
-    }
+  //  }
+    idSlice := []byte(id)
 
+    log.Println(idSlice)
     if id == "" {
         log.Println("bad request" )
         //todo logic for errror handling 
     }
-    
+    h.discoveryService.GetRegisteredById(uuid.UUID([]byte(id)))
 }
 
 func (h *handler) HandleGetAllRegistered(w http.ResponseWriter, r *http.Request) {

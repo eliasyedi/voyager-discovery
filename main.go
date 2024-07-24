@@ -36,7 +36,7 @@ func main(){
     url:= common.EnvStringOrDef("URL", "0.0.0.0:3000");
 
     //store
-    store := store.NewInMemmoryStore()
+    store := store.NewInMemmoryStore(nil)
 
     //service
     discoveryService := services.NewDiscoveryService(store)

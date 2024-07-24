@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 )
 
+
+
 //interface for implementing diferent types of storing data
 type DiscoveryService interface{
     //creates a register for a service
@@ -22,7 +24,7 @@ type DiscoveryService interface{
 //dont really know about naming conventions in golang
 type DiscoveryServiceInMemmory struct{
     //this should hold whatever it needs to use
-
+    //store interface 
     store store.Store 
 }
 
@@ -37,7 +39,6 @@ func NewDiscoveryService(store store.Store) *DiscoveryServiceInMemmory {
 
 
 
-
 func (d *DiscoveryServiceInMemmory) Create(registry store.RegisterEntry){
     log.Println("storing value {%v} "+ fmt.Sprint(registry));
     d.store.Store(registry)
@@ -45,6 +46,8 @@ func (d *DiscoveryServiceInMemmory) Create(registry store.RegisterEntry){
 
 
 func (d *DiscoveryServiceInMemmory) GetRegisteredById(id uuid.UUID) store.RegisterEntry{
+    log.Println("id")
+    log.Println(id)
     data, err := d.store.Get(id)
 
     if err != nil {

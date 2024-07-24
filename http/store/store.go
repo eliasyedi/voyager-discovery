@@ -6,9 +6,36 @@ import (
 	"errors"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+type StoreConfig struct{
+    //max size. note: it's only recommended for in memmory, by default should be -1 
+    maxSize int
+    //max ammuont of time that a service lives if for control and registration 
+    maxTtlServices time.Duration
+}
+
+func NewDefaultStoreConfig()*StoreConfig{
+    return &StoreConfig{
+        // -1 will not control size
+        maxSize: -1,
+        //max time that a services may use for registration
+        maxTtlServices: time.Duration(10*time.Second),
+    } 
+}
+
+
+func ConfigService(options ...func(*StoreConfig)) *StoreConfig{
+    var config *StoreConfig = NewDefaultStoreConfig()
+    //config := NewDefaultConfig()
+    for _ , opt := range options {
+        opt(config)
+    }
+    return config;
+}
 
 //interface for storing implementation
 type Store interface{
@@ -18,15 +45,20 @@ type Store interface{
     Get(key any) (RegisterEntry, error)
     //gets all registered apis
     GetAll() []RegisterEntry 
+    
 }
 
-
+//todo there needs to be different structs for response maybe, or wrap it in another struct with extension for response or storage
 type RegisterEntry struct{
     //maybe theres more data to be put here 
     ID              uuid.UUID `json:"id"` //only for response
     ServiceCode     string `json:"serviceCode"`
     Url             string `json:"url"`
     ServiceName     string `json:"serviceName"`
+    Ttl             *int64 `json:"ttl,ommitempty"`
+    //response
+    Expiration      time.Time
+
 }
 //trying out 
 //type RegisterEntryResponse struct{
@@ -42,14 +74,19 @@ type RegisterStore map[any]RegisterEntry
 
 //struct for storage synchronization
 type MapStore struct{
+    options *StoreConfig
     l sync.RWMutex
     store RegisterStore
 }
 
 
-func NewInMemmoryStore()*MapStore{
+func NewInMemmoryStore(options *StoreConfig)*MapStore{
+    if options != nil{
+        options = NewDefaultStoreConfig()
+    }
     return &MapStore{
         store: make(map[any]RegisterEntry),
+        options: options,
     }
 }
 
@@ -70,18 +107,24 @@ func (s *MapStore) populate(){
 }
 
 
-
 func (s *MapStore) Store(value RegisterEntry){
     s.l.Lock()
     defer s.l.Unlock()
     key, err := uuid.NewUUID()
+    expiration:= time.Now().Add(s.options.maxTtlServices)
+    if value.Ttl != nil {
+        //tideous trick 
+        plusExpiration := *value.Ttl*int64(time.Second)
+        expiration = time.Now().Add(time.Duration(plusExpiration));
+    }
     if err != nil{
         log.Printf(err.Error())
         return
     }
     value.ID = key
+    value.Expiration = expiration
     s.store[key]= value
-    log.Printf("storing key value pair [%s], [%s]\n", key, value)
+    log.Printf("storing key value pair [%s], [%v]\n", key, value)
 }
 
 
@@ -89,7 +132,7 @@ func (s *MapStore) Get(key any) (RegisterEntry, error){
     s.l.RLock()
     defer s.l.RUnlock()
     if v, has := s.store[key]; has{
-       log.Printf("got key value pair [%s], [%s] \n", key, v)
+       log.Printf("got key value pair [%s], [%v] \n", key, v)
         return v, nil
     }
     return RegisterEntry{}, errors.New("no data entry found");
@@ -106,3 +149,6 @@ func (s *MapStore) GetAll() []RegisterEntry{
     s.l.Unlock()
     return registryList
 }
+
+
+
