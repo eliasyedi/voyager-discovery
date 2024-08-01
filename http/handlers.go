@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"voyager-discovery/http/services"
 	"voyager-discovery/http/store"
 
@@ -61,14 +60,23 @@ func (h *handler) HandlePostRegister(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("could not deserialize request body")
         //todo logic for errror handling 
 	}
-    bodyStr := &store.RegisterEntry{}
+    bodyStr := &RegisterEntryRequest{}
     err = json.Unmarshal(body, &bodyStr)
 	if err != nil {
 		log.Fatalf("could not deserialize request body")
         //todo logic for errror handling 
+        
 	}
-	log.Println(body)
-    h.discoveryService.Create(*bodyStr)
+
+    reqBod := store.RegisterEntry{
+        ServiceCode: bodyStr.ServiceCode,
+        Url: bodyStr.Url,
+        ServiceName: bodyStr.ServiceName,
+        Ttl: int64(*bodyStr.Ttl),
+    }
+
+    
+    h.discoveryService.Create(reqBod)
 }
 
 func (h *handler) HandleGetRegisteredById(w http.ResponseWriter, r *http.Request) {
@@ -79,8 +87,6 @@ func (h *handler) HandleGetRegisteredById(w http.ResponseWriter, r *http.Request
     log.Println(id)
     //no need for pathUnescape, its allready unescaped
     //id,err := url.PathUnescape(id)
-    log.Println("after")
-    log.Println(id)
 //    if err !=nil {
  //       log.Println("bad request" )
         //todo logic for errror handling 
@@ -97,9 +103,21 @@ func (h *handler) HandleGetRegisteredById(w http.ResponseWriter, r *http.Request
 
 func (h *handler) HandleGetAllRegistered(w http.ResponseWriter, r *http.Request) {
 	log.Println("handle get registered services")
-    entry := h.discoveryService.GetAllRegistered();
+    entries := h.discoveryService.GetAllRegistered();
+    entriesResponse := make([]RegistryEntryResponse, len(entries))
+    for _ , data := range entries{
+        entry := RegistryEntryResponse{
+            ID: data.Id, 
+            ServiceCode: data.ServiceCode,
+            Url: data.Url,
+            ServiceName: data.ServiceName,
+            Expiration: TimeWrapper(data.Expiration),
+
+        }
+        entriesResponse = append(entriesResponse, entry)
+    }
     
-    jsonRes, err := json.Marshal(entry);
+    jsonRes, err := json.Marshal(entriesResponse);
     if err != nil {
         //todo logic for errror handling 
         log.Println("theres been an error")

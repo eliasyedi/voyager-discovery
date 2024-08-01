@@ -51,11 +51,11 @@ type Store interface{
 //todo there needs to be different structs for response maybe, or wrap it in another struct with extension for response or storage
 type RegisterEntry struct{
     //maybe theres more data to be put here 
-    ID              uuid.UUID `json:"id"` //only for response
-    ServiceCode     string `json:"serviceCode"`
-    Url             string `json:"url"`
-    ServiceName     string `json:"serviceName"`
-    Ttl             *int64 `json:"ttl,ommitempty"`
+    Id              uuid.UUID 
+    ServiceCode     string 
+    Url             string 
+    ServiceName     string 
+    Ttl             int64 
     //response
     Expiration      time.Time
 
@@ -111,17 +111,12 @@ func (s *MapStore) Store(value RegisterEntry){
     s.l.Lock()
     defer s.l.Unlock()
     key, err := uuid.NewUUID()
-    expiration:= time.Now().Add(s.options.maxTtlServices)
-    if value.Ttl != nil {
-        //tideous trick 
-        plusExpiration := *value.Ttl*int64(time.Second)
-        expiration = time.Now().Add(time.Duration(plusExpiration));
-    }
+    expiration := time.Now().Add(time.Duration(time.Second * time.Duration(value.Ttl)));
     if err != nil{
         log.Printf(err.Error())
         return
     }
-    value.ID = key
+    value.Id = key
     value.Expiration = expiration
     s.store[key]= value
     log.Printf("storing key value pair [%s], [%v]\n", key, value)
@@ -129,8 +124,8 @@ func (s *MapStore) Store(value RegisterEntry){
 
 
 func (s *MapStore) Get(key any) (RegisterEntry, error){
-    s.l.RLock()
-    defer s.l.RUnlock()
+    s.l.Lock()
+    defer s.l.Unlock()
     if v, has := s.store[key]; has{
        log.Printf("got key value pair [%s], [%v] \n", key, v)
         return v, nil

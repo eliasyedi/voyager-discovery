@@ -8,18 +8,21 @@ import (
 )
 
 
+var (
 
+    s *store.MapStore = store.NewInMemmoryStore(nil)
+    d *DiscoveryServiceInMemmory = NewDiscoveryService(s)
+)
 
 
 
 
 func TestServiceRegistration(t *testing.T){
-    s := store.NewInMemmoryStore()
-    d := NewDiscoveryService(s)
     value := store.RegisterEntry{
         ServiceCode: "api",
         Url: "localhost",
         ServiceName: "test",
+        Ttl: 5, 
     }
     for i:=1 ;i<5 ; i++{
         go func(){
@@ -29,15 +32,35 @@ func TestServiceRegistration(t *testing.T){
 }
 
 
+func TestConcurrencyWR(t *testing.T){
+    t.Run("register",func(t *testing.T) {
+        t.Parallel()    
+        value := store.RegisterEntry{
+            ServiceCode: "api",
+            Url: "localhost",
+            ServiceName: "test",
+            Ttl: 5, 
+        }
+        for i:=1 ;i<5 ; i++{
+            go func(){
+                d.Create(value)
+            }()
+        }
+    })
+    t.Run("getAll",func(t *testing.T) {
+        for i :=0 ; i<5 ; i++{
+            data := d.GetAllRegistered()
+            t.Log(data)
+        }
+    })
+}
 
 func TestGetAllRegistretionApis(t *testing.T){
-
-    s := store.NewInMemmoryStore()
-    d := NewDiscoveryService(s)
     value := store.RegisterEntry{
         ServiceCode: "api",
         Url: "localhost",
         ServiceName: "test",
+        Ttl: 5,
     }
     var wg sync.WaitGroup
     wg.Add(4)

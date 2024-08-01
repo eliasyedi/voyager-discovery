@@ -46,7 +46,6 @@ func (d *DiscoveryServiceInMemmory) Create(registry store.RegisterEntry){
 
 
 func (d *DiscoveryServiceInMemmory) GetRegisteredById(id uuid.UUID) store.RegisterEntry{
-    log.Println("id")
     log.Println(id)
     data, err := d.store.Get(id)
 
